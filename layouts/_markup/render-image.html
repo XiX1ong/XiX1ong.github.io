@@ -1,0 +1,42 @@
+{{- $image := partial "helper/image" (dict "Resources" .Page.Resources "Image" .Destination "Context" .Page) -}}
+{{- $alt := .PlainText | safeHTML -}}
+{{- $title := .Title | markdownify -}}
+{{- $resource := $image.Resource -}}
+{{- $permalink := $image.Permalink -}}
+{{- $width := $image.Width -}}
+{{- $height := $image.Height -}}
+
+{{- /* Convert processable content images to WebP and cap lightbox images at 2400 px. */ -}}
+{{- if and $resource (reflect.IsImageResourceProcessable $resource) -}}
+    {{- $targetWidth := math.Min 2400 $resource.Width | int -}}
+    {{- $resource = $resource.Resize (printf "%dx webp q82" $targetWidth) -}}
+    {{- $permalink = $resource.RelPermalink -}}
+    {{- $width = $resource.Width -}}
+    {{- $height = $resource.Height -}}
+{{- end -}}
+
+{{- $galleryImage := and $height $width -}}
+{{- $attributes := dict -}}
+{{- if $galleryImage -}}
+    {{- $attributes = dict
+        "data-flex-grow" (div (mul $width 100) $height)
+        "data-flex-basis" (printf "%dpx" (div (mul $width 240) $height))
+    -}}
+{{- end -}}
+
+{{- partial "helper/responsive-image" (dict
+    "Resource" $resource
+    "Widths" (cond .Page.Site.Params.ImageProcessing.Content.Enabled .Page.Site.Params.ImageProcessing.Content.Widths nil)
+    "Attributes" (merge $attributes (dict
+        "src" $permalink
+        "width" $width
+        "height" $height
+        "alt" $alt
+        "title" $title
+        "data-title-escaped" ($title | htmlEscape)
+        "class" (cond $galleryImage "gallery-image" "")
+        "loading" "lazy"
+        "decoding" "async"
+        "sizes" "(max-width: 767px) calc(100vw - 30px), (max-width: 1023px) 700px, (max-width: 1279px) 950px, 1232px"
+    ))
+) -}}
